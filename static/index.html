@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event & Travel Budget Planner</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+            color: #2c3e50;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .title-section {
+            margin-bottom: 20px;
+        }
+        
+        .title-section input[type="text"] {
+            width: 100%;
+            font-size: 24px;
+            font-weight: 600;
+            padding: 12px;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .title-section textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 60px;
+            font-family: inherit;
+        }
+        
+        .controls-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .input-group label {
+            font-weight: 600;
+            color: #34495e;
+            font-size: 14px;
+        }
+        
+        .input-group input {
+            padding: 10px 16px;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 150px;
+        }
+        
+        .currency-toggle {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .currency-toggle button {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .currency-toggle button.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .currency-toggle button:hover {
+            background: #eef2ff;
+        }
+        
+        .currency-toggle button.active:hover {
+            background: #5568d3;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .save-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .save-status.saved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .save-status.unsaved {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .save-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .save-indicator.saved {
+            background: #10b981;
+        }
+        
+        .save-indicator.unsaved {
+            background: #f59e0b;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .cost-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 24px;
+            border-radius: 10px;
+            color: white;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .cost-item {
+            text-align: center;
+        }
+        
+        .cost-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+        
+        .cost-value-dual {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .cost-value-secondary {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .sidebar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+        
+        .sidebar h2 {
+            color: #2c3e50;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .category-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        
+        .category-venue { background: #dbeafe; color: #1e40af; }
+        .category-food { background: #fce7f3; color: #be185d; }
+        .category-travel { background: #dcfce7; color: #166534; }
+        .category-entertainment { background: #fef3c7; color: #92400e; }
+        .category-accommodation { background: #e9d5ff; color: #6b21a8; }
+        .category-other { background: #f3f4f6; color: #374151; }
+        
+        .event-card {
+            background: #f8f9fa;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            cursor: grab;
+            transition: all 0.2s;
+        }
+        
+        .event-card:active {
+            cursor: grabbing;
+        }
+        
+        .event-card:hover {
+            border-color: #667eea;
+            background: #eef2ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .event-card.dragging {
+            opacity: 0.5;
+        }
+        
+        .event-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        
+        .event-details {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+        
+        .event-cost {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .cost-badge {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .cost-badge.min {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .event-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .schedule-area {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .schedule-area h2 {
+            color: #2c3e50;
+            font-size: 20px;
+        }
+        
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        
+        .day-column {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+            min-height: 400px;
+            position: relative;
+        }
+        
+        .day-column.drag-over {
+            background: #eff6ff;
+            border-color: #3b82f6;
+        }
+        
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #cbd5e1;
+        }
+        
+        .day-header-content {
+            flex: 1;
+        }
+        
+        .day-title {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+        }
+        
+        .day-title:hover {
+            background: #e2e8f0;
+        }
+        
+        .day-title input {
+            border: none;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            width: 100%;
+        }
+        
+        .day-notes {
+            font-size: 11px;
+            color: #64748b;
+            font-style: italic;
+            margin-top: 4px;
+            cursor: pointer;
+        }
+        
+        .day-notes:hover {
+            color: #475569;
+        }
+        
+        .day-total {
+            font-size: 12px;
+            color: #059669;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        
+        .remove-day-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+        }
+        
+        .remove-day-btn:hover {
+            color: #dc2626;
+        }
+        
+        .scheduled-event {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: move;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .scheduled-event:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .scheduled-event.dragging {
+            opacity: 0.5;
+        }
+        
+        .scheduled-event-name {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        
+        .scheduled-event-time {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        
+        .scheduled-event-cost {
+            font-size: 12px;
+            color: #059669;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .scheduled-event-actions {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .empty-state {
+            color: #94a3b8;
+            font-style: italic;
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 13px;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #475569;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .info-note {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            padding: 12px;
+            margin-bottom: 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #1e40af;
+        }
+        
+        .csv-input {
+            width: 100%;
+            min-height: 200px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Sample data
+        const sampleEvents = [
+            {
+                id: 1,
+                name: "Welcome Dinner",
+                description: "Buffet dinner at Grand Hotel",
+                duration: "3 hours",
+                perPersonCost: 850,
+                minimumCost: 5000,
+                category: "food"
+            },
+            {
+                id: 2,
+                name: "Conference Hall Rental",
+                description: "Main venue for keynote sessions",
+                duration: "Full day",
+                perPersonCost: 0,
+                minimumCost: 8000,
+                category: "venue"
+            },
+            {
+                id: 3,
+                name: "Workshop Session",
+                description: "Interactive training with materials",
+                duration: "4 hours",
+                perPersonCost: 1200,
+                minimumCost: 0,
+                category: "venue"
+            }
+        ];
+
+        const CATEGORIES = {
+            venue: "Venue",
+            food: "Food & Beverage",
+            travel: "Travel & Transport",
+            entertainment: "Entertainment",
+            accommodation: "Accommodation",
+            other: "Other"
+        };
+
+        function App() {
+            const [eventTitle, setEventTitle] = useState("My Event");
+            const [eventDescription, setEventDescription] = useState("");
+            const [attendees, setAttendees] = useState(80);
+            const [events, setEvents] = useState(sampleEvents);
+            const [days, setDays] = useState([
+                { id: 'day1', label: 'Day 1', notes: '' },
+                { id: 'day2', label: 'Day 2', notes: '' },
+                { id: 'day3', label: 'Day 3', notes: '' },
+                { id: 'day4', label: 'Day 4', notes: '' }
+            ]);
+            const [schedule, setSchedule] = useState({
+                day1: [],
+                day2: [],
+                day3: [],
+                day4: []
+            });
+            const [draggedEvent, setDraggedEvent] = useState(null);
+            const [draggedFrom, setDraggedFrom] = useState(null);
+            const [showEventModal, setShowEventModal] = useState(false);
+            const [showImportModal, setShowImportModal] = useState(false);
+            const [showDayNotesModal, setShowDayNotesModal] = useState(false);
+            const [editingEvent, setEditingEvent] = useState(null);
+            const [editingDay, setEditingDay] = useState(null);
+            const [nextId, setNextId] = useState(4);
+            const [nextDayId, setNextDayId] = useState(5);
+            const [currency, setCurrency] = useState('HKD');
+            const [lastSaved, setLastSaved] = useState(null);
+            const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+            const exchangeRate = 7.8;
+
+            // Auto-save to backend API
+            useEffect(() => {
+                const planData = {
+                    eventTitle,
+                    eventDescription,
+                    attendees,
+                    events,
+                    days,
+                    schedule,
+                    nextEventId: nextId,
+                    nextDayId,
+                    currency
+                };
+                
+                // Save to backend API
+                fetch('/api/data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(planData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    setLastSaved(new Date());
+                    setHasUnsavedChanges(false);
+                })
+                .catch(error => {
+                    console.error('Error saving data:', error);
+                });
+            }, [eventTitle, eventDescription, attendees, events, days, schedule, nextId, nextDayId, currency]);
+
+            // Mark as unsaved when changes occur
+            useEffect(() => {
+                setHasUnsavedChanges(true);
+            }, [eventTitle, eventDescription, attendees, events, days, schedule]);
+
+            // Warn before closing with unsaved changes
+            useEffect(() => {
+                const handleBeforeUnload = (e) => {
+                    if (hasUnsavedChanges) {
+                        e.preventDefault();
+                        e.returnValue = 'You have unsaved changes. Download your plan to save permanently!';
+                        return e.returnValue;
+                    }
+                };
+                
+                window.addEventListener('beforeunload', handleBeforeUnload);
+                return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+            }, [hasUnsavedChanges]);
+
+            // Auto-backup every 5 minutes
+            useEffect(() => {
+                const autoBackup = setInterval(() => {
+                    if (events.length > 0 || Object.values(schedule).some(day => day.length > 0)) {
+                        handleAutoBackup();
+                    }
+                }, 5 * 60 * 1000); // 5 minutes
+                
+                return () => clearInterval(autoBackup);
+            }, [events, schedule, eventTitle, eventDescription, attendees, days, nextId, nextDayId, currency]);
+
+            // Load from backend API on mount
+            useEffect(() => {
+                fetch('/api/data')
+                    .then(response => response.json())
+                    .then(data => {
+                        setEventTitle(data.eventTitle || "My Event");
+                        setEventDescription(data.eventDescription || "");
+                        setAttendees(data.attendees || 80);
+                        setEvents(data.events || []);
+                        setDays(data.days || []);
+                        setSchedule(data.schedule || {});
+                        setNextId(data.nextEventId || 1);
+                        setNextDayId(data.nextDayId || 1);
+                        setCurrency(data.currency || 'HKD');
+                    })
+                    .catch(error => {
+                        console.error('Error loading data:', error);
+                        // Fallback to default data
+                        setEventTitle("My Event");
+                        setAttendees(80);
+                        setEvents(sampleEvents);
+                    });
+            }, []);
+                        setNextDayId(data.nextDayId || 5);
+                        setCurrency(data.currency || 'HKD');
+                    } catch (e) {
+                        console.error('Error loading saved data');
+                    }
+                }
+            }, []);
+
+            // Calculate cost for a single event
+            const calculateEventCost = (event, attendeeCount) => {
+                const perPersonTotal = event.perPersonCost * attendeeCount;
+                const actualCost = Math.max(perPersonTotal, event.minimumCost);
+                return actualCost;
+            };
+
+            // Calculate total budget
+            const calculateTotalBudget = () => {
+                let total = 0;
+                Object.values(schedule).forEach(day => {
+                    day.forEach(event => {
+                        total += calculateEventCost(event, attendees);
+                    });
+                });
+                return total;
+            };
+
+            // Calculate day total
+            const calculateDayTotal = (dayId) => {
+                let total = 0;
+                if (schedule[dayId]) {
+                    schedule[dayId].forEach(event => {
+                        total += calculateEventCost(event, attendees);
+                    });
+                }
+                return total;
+            };
+
+            // Count total scheduled events
+            const countScheduledEvents = () => {
+                let count = 0;
+                Object.values(schedule).forEach(day => {
+                    count += day.length;
+                });
+                return count;
+            };
+
+            // Format currency
+            const formatCurrency = (amount) => {
+                if (currency === 'HKD') {
+                    return `HK$${Math.round(amount).toLocaleString()}`;
+                } else {
+                    return `US$${(amount / exchangeRate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                }
+            };
+            
+            const formatDualCurrency = (amount) => {
+                if (currency === 'HKD') {
+                    return {
+                        primary: `HK$${Math.round(amount).toLocaleString()}`,
+                        secondary: `≈ US$${(amount / exchangeRate).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                    };
+                } else {
+                    const usd = amount / exchangeRate;
+                    return {
+                        primary: `US$${usd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+                        secondary: `≈ HK$${Math.round(amount).toLocaleString()}`
+                    };
+                }
+            };
+
+            // Day management
+            const addDay = () => {
+                const newDayId = `day${nextDayId}`;
+                const newDay = {
+                    id: newDayId,
+                    label: `Day ${nextDayId}`,
+                    notes: ''
+                };
+                setDays([...days, newDay]);
+                setSchedule({...schedule, [newDayId]: []});
+                setNextDayId(nextDayId + 1);
+            };
+
+            const removeDay = (dayId) => {
+                if (days.length <= 1) {
+                    alert('You must have at least one day!');
+                    return;
+                }
+                if (schedule[dayId] && schedule[dayId].length > 0) {
+                    if (!confirm('This day has scheduled events. Are you sure you want to remove it?')) {
+                        return;
+                    }
+                }
+                setDays(days.filter(d => d.id !== dayId));
+                const newSchedule = {...schedule};
+                delete newSchedule[dayId];
+                setSchedule(newSchedule);
+            };
+
+            const updateDayLabel = (dayId, newLabel) => {
+                setDays(days.map(d => d.id === dayId ? {...d, label: newLabel} : d));
+            };
+
+            const updateDayNotes = (dayId, notes) => {
+                setDays(days.map(d => d.id === dayId ? {...d, notes} : d));
+            };
+
+            // Drag handlers
+            const handleDragStart = (event) => {
+                setDraggedEvent(event);
+                setDraggedFrom('library');
+            };
+
+            const handleScheduledDragStart = (event, day) => {
+                setDraggedEvent(event);
+                setDraggedFrom(day);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+            };
+
+            const handleDrop = (day, e) => {
+                e.preventDefault();
+                if (!draggedEvent) return;
+
+                const newSchedule = { ...schedule };
+
+                if (draggedFrom && draggedFrom !== 'library') {
+                    newSchedule[draggedFrom] = newSchedule[draggedFrom].filter(
+                        evt => evt.id !== draggedEvent.id
+                    );
+                }
+
+                if (!newSchedule[day]) {
+                    newSchedule[day] = [];
+                }
+                newSchedule[day] = [...newSchedule[day], draggedEvent];
+                
+                setSchedule(newSchedule);
+                setDraggedEvent(null);
+                setDraggedFrom(null);
+            };
+
+            const removeFromSchedule = (day, eventId) => {
+                const newSchedule = { ...schedule };
+                newSchedule[day] = newSchedule[day].filter(evt => evt.id !== eventId);
+                setSchedule(newSchedule);
+            };
+
+            // Event management
+            const handleAddEvent = (eventData) => {
+                const newEvent = {
+                    ...eventData,
+                    id: nextId,
+                    perPersonCost: parseFloat(eventData.perPersonCost) || 0,
+                    minimumCost: parseFloat(eventData.minimumCost) || 0
+                };
+                setEvents([...events, newEvent]);
+                setNextId(nextId + 1);
+                setShowEventModal(false);
+            };
+
+            const handleEditEvent = (eventData) => {
+                const updatedEvent = {
+                    ...eventData,
+                    perPersonCost: parseFloat(eventData.perPersonCost) || 0,
+                    minimumCost: parseFloat(eventData.minimumCost) || 0
+                };
+                
+                setEvents(events.map(evt => 
+                    evt.id === updatedEvent.id ? updatedEvent : evt
+                ));
+                
+                const newSchedule = { ...schedule };
+                Object.keys(newSchedule).forEach(day => {
+                    newSchedule[day] = newSchedule[day].map(evt =>
+                        evt.id === updatedEvent.id ? updatedEvent : evt
+                    );
+                });
+                setSchedule(newSchedule);
+                
+                setEditingEvent(null);
+                setShowEventModal(false);
+            };
+
+            const handleDeleteEvent = (eventId) => {
+                if (!confirm('Are you sure you want to delete this event?')) return;
+                
+                setEvents(events.filter(evt => evt.id !== eventId));
+                
+                const newSchedule = { ...schedule };
+                Object.keys(newSchedule).forEach(day => {
+                    newSchedule[day] = newSchedule[day].filter(evt => evt.id !== eventId);
+                });
+                setSchedule(newSchedule);
+            };
+
+            const handleDuplicateEvent = (event) => {
+                const duplicatedEvent = {
+                    ...event,
+                    id: nextId,
+                    name: `${event.name} (Copy)`
+                };
+                
+                // Find the index of the original event
+                const originalIndex = events.findIndex(e => e.id === event.id);
+                
+                // Insert the duplicate right after the original
+                const newEvents = [...events];
+                newEvents.splice(originalIndex + 1, 0, duplicatedEvent);
+                
+                setEvents(newEvents);
+                setNextId(nextId + 1);
+            };
+
+            // Import/Export
+            const handleImportCSV = (csvText) => {
+                try {
+                    const lines = csvText.trim().split('\n');
+                    const importedEvents = [];
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (!line) continue;
+                        
+                        const parts = line.split(',').map(p => p.trim());
+                        if (parts.length >= 5) {
+                            importedEvents.push({
+                                id: nextId + i - 1,
+                                name: parts[0],
+                                description: parts[1],
+                                duration: parts[2],
+                                perPersonCost: parseFloat(parts[3]) || 0,
+                                minimumCost: parseFloat(parts[4]) || 0,
+                                category: parts[5] || 'other'
+                            });
+                        }
+                    }
+                    
+                    setEvents([...events, ...importedEvents]);
+                    setNextId(nextId + importedEvents.length);
+                    setShowImportModal(false);
+                    alert(`Successfully imported ${importedEvents.length} events!`);
+                } catch (error) {
+                    alert('Error importing CSV. Please check the format.');
+                }
+            };
+
+            const handleExportSchedule = () => {
+                let csv = `${eventTitle}\n`;
+                csv += `${eventDescription}\n`;
+                csv += `Total Attendees: ${attendees}\n`;
+                csv += `Currency: ${currency}\n\n`;
+                csv += 'Day,Day Label,Event Name,Description,Duration,Category,Per Person Cost,Minimum Cost,Calculated Cost\n';
+                
+                days.forEach(day => {
+                    if (schedule[day.id] && schedule[day.id].length > 0) {
+                        schedule[day.id].forEach(event => {
+                            const cost = calculateEventCost(event, attendees);
+                            csv += `${day.id},${day.label},${event.name},${event.description},${event.duration},${event.category},${event.perPersonCost},${event.minimumCost},${cost}\n`;
+                        });
+                    }
+                });
+                
+                csv += `\n\nTotal Budget (HKD):,${calculateTotalBudget()}\n`;
+                csv += `Per Person Cost (HKD):,${(calculateTotalBudget() / attendees).toFixed(2)}\n`;
+                
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${eventTitle.replace(/\s+/g, '-').toLowerCase()}-schedule.csv`;
+                a.click();
+            };
+
+            const handleExportEvents = () => {
+                let csv = 'Event Name,Description,Duration,Per Person Cost,Minimum Cost,Category\n';
+                events.forEach(event => {
+                    csv += `${event.name},${event.description},${event.duration},${event.perPersonCost},${event.minimumCost},${event.category}\n`;
+                });
+                
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'event-library.csv';
+                a.click();
+            };
+
+            const handleSavePlan = () => {
+                const planData = {
+                    eventTitle,
+                    eventDescription,
+                    attendees,
+                    events,
+                    days,
+                    schedule,
+                    nextId,
+                    nextDayId,
+                    currency,
+                    savedAt: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(planData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${eventTitle.replace(/\s+/g, '-').toLowerCase()}-plan.json`;
+                a.click();
+                setHasUnsavedChanges(false);
+            };
+
+            const handleAutoBackup = () => {
+                const planData = {
+                    eventTitle,
+                    eventDescription,
+                    attendees,
+                    events,
+                    days,
+                    schedule,
+                    nextId,
+                    nextDayId,
+                    currency,
+                    savedAt: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(planData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${eventTitle.replace(/\s+/g, '-').toLowerCase()}-backup-${Date.now()}.json`;
+                a.click();
+                console.log('Auto-backup created');
+            };
+
+            const handleLoadPlan = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        setEventTitle(data.eventTitle || "My Event");
+                        setEventDescription(data.eventDescription || "");
+                        setAttendees(data.attendees || 80);
+                        setEvents(data.events || []);
+                        setDays(data.days || []);
+                        setSchedule(data.schedule || {});
+                        setNextId(data.nextId || 1);
+                        setNextDayId(data.nextDayId || 1);
+                        setCurrency(data.currency || 'HKD');
+                        alert('Plan loaded successfully!');
+                    } catch (error) {
+                        alert('Error loading plan file. Please check the format.');
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const handleGenerateShareable = () => {
+                // Prepare the data to embed
+                const embeddedData = {
+                    eventTitle,
+                    eventDescription,
+                    attendees,
+                    events,
+                    days,
+                    schedule,
+                    nextId,
+                    nextDayId,
+                    currency,
+                    sharedAt: new Date().toISOString()
+                };
+                
+                // Since we can't reliably get the original source, we'll create
+                // instructions for manual sharing instead
+                const instructions = `
+To share your plan with full interactivity:
+
+METHOD 1 - Manual Data Embedding (Recommended):
+1. Save your plan using "💾 Save Plan" button
+2. Send both files to others:
+   - The event-planner-v2.html file
+   - Your ${eventTitle.replace(/\s+/g, '-').toLowerCase()}-plan.json file
+3. They open event-planner-v2.html and click "📂 Load Plan" to load your JSON
+
+METHOD 2 - Host Online (Best for sharing):
+1. Save your plan using "💾 Save Plan" button  
+2. Upload event-planner-v2.html to Netlify or GitHub Pages
+3. Upload your JSON file too
+4. Share the URL - people can access it online
+
+Would you like me to create a downloadable instruction file instead?`;
+
+                // For now, let's still download the JSON plan
+                const dataStr = JSON.stringify(embeddedData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${eventTitle.replace(/\s+/g, '-').toLowerCase()}-plan.json`;
+                a.click();
+                
+                alert('⚠️ Share Feature Note:\n\nThe auto-generated HTML has issues with interactivity.\n\nBetter option: Download your plan.json file (just downloaded), then:\n\n1. Send BOTH files to people:\n   • event-planner-v2.html\n   • your-plan.json\n\n2. They open the HTML and click "📂 Load Plan"\n\nOR upload both to a website for easy sharing!');
+            };
+
+            const handleNewPlan = () => {
+                if (confirm('Start a new plan? Current work will be lost unless saved.')) {
+                    setEventTitle("My Event");
+                    setEventDescription("");
+                    setAttendees(80);
+                    setEvents([]);
+                    setDays([
+                        { id: 'day1', label: 'Day 1', notes: '' }
+                    ]);
+                    setSchedule({ day1: [] });
+                    setNextId(1);
+                    setNextDayId(2);
+                    setCurrency('HKD');
+                }
+            };
+
+            const totalBudget = calculateTotalBudget();
+            const perPersonCost = attendees > 0 ? totalBudget / attendees : 0;
+            const scheduledCount = countScheduledEvents();
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <div className="title-section">
+                            <input 
+                                type="text"
+                                value={eventTitle}
+                                onChange={(e) => setEventTitle(e.target.value)}
+                                placeholder="Event/Trip Name"
+                            />
+                            <textarea
+                                value={eventDescription}
+                                onChange={(e) => setEventDescription(e.target.value)}
+                                placeholder="Add description (e.g., Hong Kong Medical Congress 2025, venue, dates, notes...)"
+                            />
+                        </div>
+                        
+                        <div className="controls-section">
+                            <div className="input-group">
+                                <label htmlFor="attendees">Attendees:</label>
+                                <input 
+                                    type="number" 
+                                    id="attendees" 
+                                    value={attendees}
+                                    onChange={(e) => setAttendees(parseInt(e.target.value) || 0)}
+                                    min="0"
+                                />
+                            </div>
+                            
+                            <div className="currency-toggle">
+                                <span style={{fontWeight: 600, color: '#64748b', fontSize: '14px'}}>Currency:</span>
+                                <button 
+                                    className={currency === 'HKD' ? 'active' : ''}
+                                    onClick={() => setCurrency('HKD')}
+                                >
+                                    HKD
+                                </button>
+                                <button 
+                                    className={currency === 'USD' ? 'active' : ''}
+                                    onClick={() => setCurrency('USD')}
+                                >
+                                    USD
+                                </button>
+                                <span style={{fontSize: '11px', color: '#94a3b8'}}>
+                                    (1 USD = 7.8 HKD)
+                                </span>
+                            </div>
+                            
+                            <div className={`save-status ${hasUnsavedChanges ? 'unsaved' : 'saved'}`}>
+                                <div className={`save-indicator ${hasUnsavedChanges ? 'unsaved' : 'saved'}`}></div>
+                                {hasUnsavedChanges ? (
+                                    <span>⚠️ Unsaved - Save Plan!</span>
+                                ) : (
+                                    <span>✓ Auto-saved at {lastSaved ? new Date(lastSaved).toLocaleTimeString('en-US', { timeZone: 'Asia/Hong_Kong', hour12: true }) : ''}</span>
+                                )}
+                            </div>
+                            
+                            <div className="action-buttons">
+                                <button className="btn btn-success btn-small" onClick={handleSavePlan}>
+                                    💾 Save Plan (.json)
+                                </button>
+                                <button className="btn btn-primary btn-small" onClick={handleGenerateShareable} title="Download plan for sharing">
+                                    📤 Export for Sharing
+                                </button>
+                                <label className="btn btn-primary btn-small" style={{cursor: 'pointer'}}>
+                                    📂 Load Plan
+                                    <input 
+                                        type="file" 
+                                        accept=".json"
+                                        onChange={handleLoadPlan}
+                                        style={{display: 'none'}}
+                                    />
+                                </label>
+                                <button className="btn btn-warning btn-small" onClick={handleNewPlan}>
+                                    🆕 New Plan
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="cost-summary">
+                            <div className="cost-item">
+                                <div className="cost-label">Total Budget</div>
+                                <div className="cost-value-dual">{formatDualCurrency(totalBudget).primary}</div>
+                                <div className="cost-value-secondary">{formatDualCurrency(totalBudget).secondary}</div>
+                            </div>
+                            <div className="cost-item">
+                                <div className="cost-label">Per Person Cost</div>
+                                <div className="cost-value-dual">{formatDualCurrency(perPersonCost).primary}</div>
+                                <div className="cost-value-secondary">{formatDualCurrency(perPersonCost).secondary}</div>
+                            </div>
+                            <div className="cost-item">
+                                <div className="cost-label">Events Scheduled</div>
+                                <div className="cost-value-dual">{scheduledCount}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="main-content">
+                        <div className="sidebar">
+                            <h2>📋 Event Library</h2>
+                            
+                            <div className="button-group">
+                                <button 
+                                    className="btn btn-primary btn-small"
+                                    onClick={() => {
+                                        setEditingEvent(null);
+                                        setShowEventModal(true);
+                                    }}
+                                >
+                                    ➕ Add Event
+                                </button>
+                                <button 
+                                    className="btn btn-success btn-small"
+                                    onClick={() => setShowImportModal(true)}
+                                >
+                                    📥 Import
+                                </button>
+                            </div>
+                            
+                            <div className="info-note">
+                                💡 Drag events to days to schedule
+                            </div>
+                            
+                            <div>
+                                {events.map(event => (
+                                    <div
+                                        key={event.id}
+                                        className="event-card"
+                                        draggable
+                                        onDragStart={() => handleDragStart(event)}
+                                    >
+                                        <div className="event-name">{event.name}</div>
+                                        {event.category && (
+                                            <span className={`category-badge category-${event.category}`}>
+                                                {CATEGORIES[event.category]}
+                                            </span>
+                                        )}
+                                        <div className="event-details">{event.description}</div>
+                                        <div className="event-details">⏱️ {event.duration}</div>
+                                        <div className="event-cost">
+                                            {event.perPersonCost > 0 && (
+                                                <span className="cost-badge">
+                                                    {formatCurrency(event.perPersonCost)}/person
+                                                </span>
+                                            )}
+                                            {event.minimumCost > 0 && (
+                                                <span className="cost-badge min">
+                                                    Min: {formatCurrency(event.minimumCost)}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="event-actions">
+                                            <button 
+                                                className="btn btn-secondary btn-small"
+                                                onClick={() => {
+                                                    setEditingEvent(event);
+                                                    setShowEventModal(true);
+                                                }}
+                                            >
+                                                ✏️ Edit
+                                            </button>
+                                            <button 
+                                                className="btn btn-primary btn-small"
+                                                onClick={() => handleDuplicateEvent(event)}
+                                                title="Duplicate event"
+                                            >
+                                                📋 Copy
+                                            </button>
+                                            <button 
+                                                className="btn btn-danger btn-small"
+                                                onClick={() => handleDeleteEvent(event.id)}
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            <div className="button-group" style={{marginTop: '16px'}}>
+                                <button 
+                                    className="btn btn-success btn-small"
+                                    onClick={handleExportSchedule}
+                                    disabled={scheduledCount === 0}
+                                >
+                                    📤 Export Schedule
+                                </button>
+                                <button 
+                                    className="btn btn-secondary btn-small"
+                                    onClick={handleExportEvents}
+                                    disabled={events.length === 0}
+                                >
+                                    📤 Export Library
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="schedule-area">
+                            <div className="schedule-header">
+                                <h2>📅 Schedule ({days.length} {days.length === 1 ? 'Day' : 'Days'})</h2>
+                                <button className="btn btn-primary btn-small" onClick={addDay}>
+                                    ➕ Add Day
+                                </button>
+                            </div>
+                            
+                            <div className="days-grid">
+                                {days.map((day) => (
+                                    <div
+                                        key={day.id}
+                                        className="day-column"
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(day.id, e)}
+                                    >
+                                        <div className="day-header">
+                                            <div className="day-header-content">
+                                                <div 
+                                                    className="day-title"
+                                                    onClick={() => {
+                                                        const newLabel = prompt('Enter day label:', day.label);
+                                                        if (newLabel) updateDayLabel(day.id, newLabel);
+                                                    }}
+                                                >
+                                                    {day.label}
+                                                </div>
+                                                {day.notes && (
+                                                    <div 
+                                                        className="day-notes"
+                                                        onClick={() => {
+                                                            setEditingDay(day);
+                                                            setShowDayNotesModal(true);
+                                                        }}
+                                                    >
+                                                        📝 {day.notes}
+                                                    </div>
+                                                )}
+                                                {!day.notes && (
+                                                    <div 
+                                                        className="day-notes"
+                                                        onClick={() => {
+                                                            setEditingDay(day);
+                                                            setShowDayNotesModal(true);
+                                                        }}
+                                                    >
+                                                        + Add notes
+                                                    </div>
+                                                )}
+                                                {schedule[day.id] && schedule[day.id].length > 0 && (
+                                                    <div className="day-total">
+                                                        💰 {formatCurrency(calculateDayTotal(day.id))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {days.length > 1 && (
+                                                <button 
+                                                    className="remove-day-btn"
+                                                    onClick={() => removeDay(day.id)}
+                                                    title="Remove day"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                        </div>
+                                        
+                                        {!schedule[day.id] || schedule[day.id].length === 0 ? (
+                                            <div className="empty-state">
+                                                Drop events here
+                                            </div>
+                                        ) : (
+                                            schedule[day.id].map(event => {
+                                                const cost = calculateEventCost(event, attendees);
+                                                return (
+                                                    <div
+                                                        key={event.id}
+                                                        className="scheduled-event"
+                                                        draggable
+                                                        onDragStart={() => handleScheduledDragStart(event, day.id)}
+                                                    >
+                                                        <div className="scheduled-event-name">
+                                                            {event.name}
+                                                        </div>
+                                                        {event.category && (
+                                                            <span className={`category-badge category-${event.category}`}>
+                                                                {CATEGORIES[event.category]}
+                                                            </span>
+                                                        )}
+                                                        <div className="scheduled-event-time">
+                                                            ⏱️ {event.duration}
+                                                        </div>
+                                                        <div className="scheduled-event-cost">
+                                                            💰 {formatCurrency(cost)}
+                                                            {event.perPersonCost > 0 && ` (${formatCurrency(event.perPersonCost)}/person)`}
+                                                            {event.minimumCost > 0 && event.perPersonCost === 0 && ' (Fixed)'}
+                                                        </div>
+                                                        <div className="scheduled-event-actions">
+                                                            <button 
+                                                                className="btn btn-danger btn-small"
+                                                                onClick={() => removeFromSchedule(day.id, event.id)}
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {showEventModal && (
+                        <EventModal
+                            event={editingEvent}
+                            onSave={editingEvent ? handleEditEvent : handleAddEvent}
+                            onClose={() => {
+                                setShowEventModal(false);
+                                setEditingEvent(null);
+                            }}
+                        />
+                    )}
+                    
+                    {showImportModal && (
+                        <ImportModal
+                            onImport={handleImportCSV}
+                            onClose={() => setShowImportModal(false)}
+                        />
+                    )}
+                    
+                    {showDayNotesModal && editingDay && (
+                        <DayNotesModal
+                            day={editingDay}
+                            onSave={(notes) => {
+                                updateDayNotes(editingDay.id, notes);
+                                setShowDayNotesModal(false);
+                                setEditingDay(null);
+                            }}
+                            onClose={() => {
+                                setShowDayNotesModal(false);
+                                setEditingDay(null);
+                            }}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        function EventModal({ event, onSave, onClose }) {
+            const [formData, setFormData] = useState(event || {
+                name: '',
+                description: '',
+                duration: '',
+                perPersonCost: 0,
+                minimumCost: 0,
+                category: 'other'
+            });
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!formData.name.trim()) {
+                    alert('Please enter an event name');
+                    return;
+                }
+                onSave(formData);
+            };
+
+            return (
+                <div className="modal-overlay">
+                    <div className="modal">
+                        <h3>{event ? 'Edit Event' : 'Add New Event'}</h3>
+                        
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label>Event Name *</label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    required
+                                />
+                            </div>
+                            
+                            <div className="form-group">
+                                <label>Category</label>
+                                <select
+                                    value={formData.category}
+                                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                                >
+                                    {Object.entries(CATEGORIES).map(([key, value]) => (
+                                        <option key={key} value={key}>{value}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            
+                            <div className="form-group">
+                                <label>Description</label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                />
+                            </div>
+                            
+                            <div className="form-group">
+                                <label>Duration</label>
+                                <input
+                                    type="text"
+                                    value={formData.duration}
+                                    onChange={(e) => setFormData({...formData, duration: e.target.value})}
+                                    placeholder="e.g., 2 hours, Full day"
+                                />
+                            </div>
+                            
+                            <div className="form-group">
+                                <label>Per Person Cost (HKD)</label>
+                                <input
+                                    type="number"
+                                    value={formData.perPersonCost}
+                                    onChange={(e) => setFormData({...formData, perPersonCost: e.target.value})}
+                                    min="0"
+                                    step="0.01"
+                                />
+                                <div className="help-text">Set to 0 if not applicable</div>
+                            </div>
+                            
+                            <div className="form-group">
+                                <label>Minimum Cost (HKD)</label>
+                                <input
+                                    type="number"
+                                    value={formData.minimumCost}
+                                    onChange={(e) => setFormData({...formData, minimumCost: e.target.value})}
+                                    min="0"
+                                    step="0.01"
+                                />
+                                <div className="help-text">
+                                    For venue rentals or minimum spending requirements
+                                </div>
+                            </div>
+                            
+                            <div className="form-actions">
+                                <button type="button" className="btn btn-secondary" onClick={onClose}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-primary">
+                                    {event ? 'Update' : 'Add'} Event
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        function ImportModal({ onImport, onClose }) {
+            const [csvText, setCsvText] = useState('');
+
+            const handleImport = () => {
+                if (!csvText.trim()) {
+                    alert('Please paste CSV data');
+                    return;
+                }
+                onImport(csvText);
+            };
+
+            const exampleCSV = `Event Name,Description,Duration,Per Person Cost,Minimum Cost,Category
+Conference Room,Main venue rental,Full day,0,5000,venue
+Lunch Buffet,Catered lunch,2 hours,350,1500,food`;
+
+            return (
+                <div className="modal-overlay">
+                    <div className="modal">
+                        <h3>Import Events from CSV</h3>
+                        
+                        <div className="info-note">
+                            <strong>CSV Format:</strong> Event Name, Description, Duration, Per Person Cost, Minimum Cost, Category
+                            <br/><br/>
+                            <strong>Example:</strong>
+                            <pre style={{fontSize: '11px', marginTop: '8px'}}>{exampleCSV}</pre>
+                            <br/>
+                            <strong>Categories:</strong> venue, food, travel, entertainment, accommodation, other
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Paste CSV Data</label>
+                            <textarea
+                                className="csv-input"
+                                value={csvText}
+                                onChange={(e) => setCsvText(e.target.value)}
+                                placeholder="Paste your CSV data here..."
+                            />
+                        </div>
+                        
+                        <div className="form-actions">
+                            <button className="btn btn-secondary" onClick={onClose}>
+                                Cancel
+                            </button>
+                            <button className="btn btn-success" onClick={handleImport}>
+                                Import
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function DayNotesModal({ day, onSave, onClose }) {
+            const [notes, setNotes] = useState(day.notes || '');
+
+            return (
+                <div className="modal-overlay">
+                    <div className="modal">
+                        <h3>Notes for {day.label}</h3>
+                        
+                        <div className="form-group">
+                            <label>Day Notes</label>
+                            <textarea
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                placeholder="e.g., Flight arrives 2pm, Check-out day, Free afternoon..."
+                                style={{minHeight: '120px'}}
+                            />
+                        </div>
+                        
+                        <div className="form-actions">
+                            <button className="btn btn-secondary" onClick={onClose}>
+                                Cancel
+                            </button>
+                            <button className="btn btn-primary" onClick={() => onSave(notes)}>
+                                Save Notes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
