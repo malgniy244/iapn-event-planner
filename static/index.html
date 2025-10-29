@@ -705,22 +705,16 @@
                     currency
                 };
                 
-                // Save to backend API
                 fetch('/api/data', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(planData)
                 })
-                .then(response => response.json())
-                .then(data => {
+                .then(() => {
                     setLastSaved(new Date());
                     setHasUnsavedChanges(false);
                 })
-                .catch(error => {
-                    console.error('Error saving data:', error);
-                });
+                .catch(error => console.error('Error saving:', error));
             }, [eventTitle, eventDescription, attendees, events, days, schedule, nextId, nextDayId, currency]);
 
             // Mark as unsaved when changes occur
@@ -770,18 +764,7 @@
                     })
                     .catch(error => {
                         console.error('Error loading data:', error);
-                        // Fallback to default data
-                        setEventTitle("My Event");
-                        setAttendees(80);
-                        setEvents(sampleEvents);
                     });
-            }, []);
-                        setNextDayId(data.nextDayId || 5);
-                        setCurrency(data.currency || 'HKD');
-                    } catch (e) {
-                        console.error('Error loading saved data');
-                    }
-                }
             }, []);
 
             // Calculate cost for a single event
