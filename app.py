@@ -3,8 +3,8 @@ from flask_cors import CORS
 import json
 import os
 from datetime import datetime
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import psycopg
+from psycopg.rows import dict_row
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
@@ -46,7 +46,7 @@ def get_event_by_id(event_id):
 
 def get_db_connection():
     """Get database connection"""
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
 def init_database():
     """Create table if it doesn't exist and initialize with default data"""
