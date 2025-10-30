@@ -618,7 +618,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         const CATEGORIES = {
             venue: "Venue",
@@ -650,10 +650,36 @@
             const [currency, setCurrency] = useState('HKD');
             const [lastSaved, setLastSaved] = useState(null);
             const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+            const [isLoaded, setIsLoaded] = useState(false); // CRITICAL FIX: Track if data is loaded
             const exchangeRate = 7.8;
 
-            // Auto-save to backend API (NO DOWNLOADS)
+            // Load from backend API on mount (RUNS FIRST)
             useEffect(() => {
+                fetch('/api/data')
+                    .then(response => response.json())
+                    .then(data => {
+                        setEventTitle(data.eventTitle || "My Event");
+                        setEventDescription(data.eventDescription || "");
+                        setAttendees(data.attendees || 80);
+                        setEvents(data.events || []);
+                        setDays(data.days || [{ id: 'day1', label: 'Day 1', notes: '' }]);
+                        setSchedule(data.schedule || { day1: [] });
+                        setNextId(data.nextEventId || 1);
+                        setNextDayId(data.nextDayId || 2);
+                        setCurrency(data.currency || 'HKD');
+                        setIsLoaded(true); // CRITICAL: Mark as loaded
+                        setLastSaved(new Date());
+                    })
+                    .catch(error => {
+                        console.error('Error loading data:', error);
+                        setIsLoaded(true); // Even if error, allow saves
+                    });
+            }, []);
+
+            // Auto-save to backend API (ONLY AFTER DATA IS LOADED)
+            useEffect(() => {
+                if (!isLoaded) return; // CRITICAL FIX: Don't save until data is loaded!
+                
                 const planData = {
                     eventTitle,
                     eventDescription,
@@ -676,32 +702,13 @@
                     setHasUnsavedChanges(false);
                 })
                 .catch(error => console.error('Error saving:', error));
-            }, [eventTitle, eventDescription, attendees, events, days, schedule, nextId, nextDayId, currency]);
+            }, [eventTitle, eventDescription, attendees, events, days, schedule, nextId, nextDayId, currency, isLoaded]);
 
             // Mark as unsaved when changes occur
             useEffect(() => {
+                if (!isLoaded) return;
                 setHasUnsavedChanges(true);
             }, [eventTitle, eventDescription, attendees, events, days, schedule]);
-
-            // Load from backend API on mount
-            useEffect(() => {
-                fetch('/api/data')
-                    .then(response => response.json())
-                    .then(data => {
-                        setEventTitle(data.eventTitle || "My Event");
-                        setEventDescription(data.eventDescription || "");
-                        setAttendees(data.attendees || 80);
-                        setEvents(data.events || []);
-                        setDays(data.days || [{ id: 'day1', label: 'Day 1', notes: '' }]);
-                        setSchedule(data.schedule || { day1: [] });
-                        setNextId(data.nextEventId || 1);
-                        setNextDayId(data.nextDayId || 2);
-                        setCurrency(data.currency || 'HKD');
-                    })
-                    .catch(error => {
-                        console.error('Error loading data:', error);
-                    });
-            }, []);
 
             // Calculate cost for a single event
             const calculateEventCost = (event, attendeeCount) => {
@@ -934,6 +941,33 @@
                 alert('✅ Backup downloaded!\n\nYour data is already saved to the database.\nThis JSON is just an extra backup.');
             };
 
+            // Load Plan from JSON file
+            const handleLoadPlan = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        setEventTitle(data.eventTitle || "My Event");
+                        setEventDescription(data.eventDescription || "");
+                        setAttendees(data.attendees || 80);
+                        setEvents(data.events || []);
+                        setDays(data.days || [{ id: 'day1', label: 'Day 1', notes: '' }]);
+                        setSchedule(data.schedule || { day1: [] });
+                        setNextId(data.nextEventId || 1);
+                        setNextDayId(data.nextDayId || 2);
+                        setCurrency(data.currency || 'HKD');
+                        alert('✅ Plan loaded successfully!\n\nIt will auto-save to database.');
+                    } catch (error) {
+                        alert('❌ Error loading plan file. Please check the format.');
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = ''; // Reset input so same file can be loaded again
+            };
+
             // Import/Export
             const handleImportCSV = (csvText) => {
                 try {
@@ -1062,7 +1096,9 @@
                             
                             <div className={`save-status ${hasUnsavedChanges ? 'unsaved' : 'saved'}`}>
                                 <div className={`save-indicator ${hasUnsavedChanges ? 'unsaved' : 'saved'}`}></div>
-                                {hasUnsavedChanges ? (
+                                {!isLoaded ? (
+                                    <span>Loading...</span>
+                                ) : hasUnsavedChanges ? (
                                     <span>⚠️ Saving...</span>
                                 ) : (
                                     <span>✓ Saved at {lastSaved ? new Date(lastSaved).toLocaleTimeString('en-US', { timeZone: 'Asia/Hong_Kong', hour12: true }) : ''}</span>
@@ -1073,6 +1109,15 @@
                                 <button className="btn btn-warning btn-small" onClick={handleDownloadBackup} title="Download JSON backup file">
                                     💾 Download Backup
                                 </button>
+                                <label className="btn btn-primary btn-small" style={{cursor: 'pointer'}} title="Load plan from JSON file">
+                                    📂 Load Plan
+                                    <input 
+                                        type="file" 
+                                        accept=".json"
+                                        onChange={handleLoadPlan}
+                                        style={{display: 'none'}}
+                                    />
+                                </label>
                             </div>
                         </div>
                         
