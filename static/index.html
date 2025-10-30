@@ -620,37 +620,6 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Sample data
-        const sampleEvents = [
-            {
-                id: 1,
-                name: "Welcome Dinner",
-                description: "Buffet dinner at Grand Hotel",
-                duration: "3 hours",
-                perPersonCost: 850,
-                minimumCost: 5000,
-                category: "food"
-            },
-            {
-                id: 2,
-                name: "Conference Hall Rental",
-                description: "Main venue for keynote sessions",
-                duration: "Full day",
-                perPersonCost: 0,
-                minimumCost: 8000,
-                category: "venue"
-            },
-            {
-                id: 3,
-                name: "Workshop Session",
-                description: "Interactive training with materials",
-                duration: "4 hours",
-                perPersonCost: 1200,
-                minimumCost: 0,
-                category: "venue"
-            }
-        ];
-
         const CATEGORIES = {
             venue: "Venue",
             food: "Food & Beverage",
@@ -664,19 +633,11 @@
             const [eventTitle, setEventTitle] = useState("My Event");
             const [eventDescription, setEventDescription] = useState("");
             const [attendees, setAttendees] = useState(80);
-            const [events, setEvents] = useState(sampleEvents);
+            const [events, setEvents] = useState([]);
             const [days, setDays] = useState([
-                { id: 'day1', label: 'Day 1', notes: '' },
-                { id: 'day2', label: 'Day 2', notes: '' },
-                { id: 'day3', label: 'Day 3', notes: '' },
-                { id: 'day4', label: 'Day 4', notes: '' }
+                { id: 'day1', label: 'Day 1', notes: '' }
             ]);
-            const [schedule, setSchedule] = useState({
-                day1: [],
-                day2: [],
-                day3: [],
-                day4: []
-            });
+            const [schedule, setSchedule] = useState({ day1: [] });
             const [draggedEvent, setDraggedEvent] = useState(null);
             const [draggedFrom, setDraggedFrom] = useState(null);
             const [showEventModal, setShowEventModal] = useState(false);
@@ -684,14 +645,14 @@
             const [showDayNotesModal, setShowDayNotesModal] = useState(false);
             const [editingEvent, setEditingEvent] = useState(null);
             const [editingDay, setEditingDay] = useState(null);
-            const [nextId, setNextId] = useState(4);
-            const [nextDayId, setNextDayId] = useState(5);
+            const [nextId, setNextId] = useState(1);
+            const [nextDayId, setNextDayId] = useState(2);
             const [currency, setCurrency] = useState('HKD');
             const [lastSaved, setLastSaved] = useState(null);
             const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
             const exchangeRate = 7.8;
 
-            // Auto-save to backend API
+            // Auto-save to backend API (NO DOWNLOADS)
             useEffect(() => {
                 const planData = {
                     eventTitle,
@@ -722,31 +683,6 @@
                 setHasUnsavedChanges(true);
             }, [eventTitle, eventDescription, attendees, events, days, schedule]);
 
-            // Warn before closing with unsaved changes
-            useEffect(() => {
-                const handleBeforeUnload = (e) => {
-                    if (hasUnsavedChanges) {
-                        e.preventDefault();
-                        e.returnValue = 'You have unsaved changes. Download your plan to save permanently!';
-                        return e.returnValue;
-                    }
-                };
-                
-                window.addEventListener('beforeunload', handleBeforeUnload);
-                return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-            }, [hasUnsavedChanges]);
-
-            // Auto-backup every 5 minutes
-            useEffect(() => {
-                const autoBackup = setInterval(() => {
-                    if (events.length > 0 || Object.values(schedule).some(day => day.length > 0)) {
-                        handleAutoBackup();
-                    }
-                }, 5 * 60 * 1000); // 5 minutes
-                
-                return () => clearInterval(autoBackup);
-            }, [events, schedule, eventTitle, eventDescription, attendees, days, nextId, nextDayId, currency]);
-
             // Load from backend API on mount
             useEffect(() => {
                 fetch('/api/data')
@@ -756,10 +692,10 @@
                         setEventDescription(data.eventDescription || "");
                         setAttendees(data.attendees || 80);
                         setEvents(data.events || []);
-                        setDays(data.days || []);
-                        setSchedule(data.schedule || {});
+                        setDays(data.days || [{ id: 'day1', label: 'Day 1', notes: '' }]);
+                        setSchedule(data.schedule || { day1: [] });
                         setNextId(data.nextEventId || 1);
-                        setNextDayId(data.nextDayId || 1);
+                        setNextDayId(data.nextDayId || 2);
                         setCurrency(data.currency || 'HKD');
                     })
                     .catch(error => {
@@ -964,15 +900,38 @@
                     name: `${event.name} (Copy)`
                 };
                 
-                // Find the index of the original event
                 const originalIndex = events.findIndex(e => e.id === event.id);
-                
-                // Insert the duplicate right after the original
                 const newEvents = [...events];
                 newEvents.splice(originalIndex + 1, 0, duplicatedEvent);
                 
                 setEvents(newEvents);
                 setNextId(nextId + 1);
+            };
+
+            // Manual Download JSON (ONLY WHEN CLICKED)
+            const handleDownloadBackup = () => {
+                const planData = {
+                    eventTitle,
+                    eventDescription,
+                    attendees,
+                    events,
+                    days,
+                    schedule,
+                    nextEventId: nextId,
+                    nextDayId,
+                    currency,
+                    savedAt: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(planData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${eventTitle.replace(/\s+/g, '-').toLowerCase()}-backup.json`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+                alert('✅ Backup downloaded!\n\nYour data is already saved to the database.\nThis JSON is just an extra backup.');
             };
 
             // Import/Export
@@ -1049,142 +1008,6 @@
                 a.click();
             };
 
-            const handleSavePlan = () => {
-                const planData = {
-                    eventTitle,
-                    eventDescription,
-                    attendees,
-                    events,
-                    days,
-                    schedule,
-                    nextId,
-                    nextDayId,
-                    currency,
-                    savedAt: new Date().toISOString()
-                };
-                
-                const dataStr = JSON.stringify(planData, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${eventTitle.replace(/\s+/g, '-').toLowerCase()}-plan.json`;
-                a.click();
-                setHasUnsavedChanges(false);
-            };
-
-            const handleAutoBackup = () => {
-                const planData = {
-                    eventTitle,
-                    eventDescription,
-                    attendees,
-                    events,
-                    days,
-                    schedule,
-                    nextId,
-                    nextDayId,
-                    currency,
-                    savedAt: new Date().toISOString()
-                };
-                
-                const dataStr = JSON.stringify(planData, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${eventTitle.replace(/\s+/g, '-').toLowerCase()}-backup-${Date.now()}.json`;
-                a.click();
-                console.log('Auto-backup created');
-            };
-
-            const handleLoadPlan = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        setEventTitle(data.eventTitle || "My Event");
-                        setEventDescription(data.eventDescription || "");
-                        setAttendees(data.attendees || 80);
-                        setEvents(data.events || []);
-                        setDays(data.days || []);
-                        setSchedule(data.schedule || {});
-                        setNextId(data.nextId || 1);
-                        setNextDayId(data.nextDayId || 1);
-                        setCurrency(data.currency || 'HKD');
-                        alert('Plan loaded successfully!');
-                    } catch (error) {
-                        alert('Error loading plan file. Please check the format.');
-                    }
-                };
-                reader.readAsText(file);
-            };
-
-            const handleGenerateShareable = () => {
-                // Prepare the data to embed
-                const embeddedData = {
-                    eventTitle,
-                    eventDescription,
-                    attendees,
-                    events,
-                    days,
-                    schedule,
-                    nextId,
-                    nextDayId,
-                    currency,
-                    sharedAt: new Date().toISOString()
-                };
-                
-                // Since we can't reliably get the original source, we'll create
-                // instructions for manual sharing instead
-                const instructions = `
-To share your plan with full interactivity:
-
-METHOD 1 - Manual Data Embedding (Recommended):
-1. Save your plan using "💾 Save Plan" button
-2. Send both files to others:
-   - The event-planner-v2.html file
-   - Your ${eventTitle.replace(/\s+/g, '-').toLowerCase()}-plan.json file
-3. They open event-planner-v2.html and click "📂 Load Plan" to load your JSON
-
-METHOD 2 - Host Online (Best for sharing):
-1. Save your plan using "💾 Save Plan" button  
-2. Upload event-planner-v2.html to Netlify or GitHub Pages
-3. Upload your JSON file too
-4. Share the URL - people can access it online
-
-Would you like me to create a downloadable instruction file instead?`;
-
-                // For now, let's still download the JSON plan
-                const dataStr = JSON.stringify(embeddedData, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${eventTitle.replace(/\s+/g, '-').toLowerCase()}-plan.json`;
-                a.click();
-                
-                alert('⚠️ Share Feature Note:\n\nThe auto-generated HTML has issues with interactivity.\n\nBetter option: Download your plan.json file (just downloaded), then:\n\n1. Send BOTH files to people:\n   • event-planner-v2.html\n   • your-plan.json\n\n2. They open the HTML and click "📂 Load Plan"\n\nOR upload both to a website for easy sharing!');
-            };
-
-            const handleNewPlan = () => {
-                if (confirm('Start a new plan? Current work will be lost unless saved.')) {
-                    setEventTitle("My Event");
-                    setEventDescription("");
-                    setAttendees(80);
-                    setEvents([]);
-                    setDays([
-                        { id: 'day1', label: 'Day 1', notes: '' }
-                    ]);
-                    setSchedule({ day1: [] });
-                    setNextId(1);
-                    setNextDayId(2);
-                    setCurrency('HKD');
-                }
-            };
-
             const totalBudget = calculateTotalBudget();
             const perPersonCost = attendees > 0 ? totalBudget / attendees : 0;
             const scheduledCount = countScheduledEvents();
@@ -1240,30 +1063,15 @@ Would you like me to create a downloadable instruction file instead?`;
                             <div className={`save-status ${hasUnsavedChanges ? 'unsaved' : 'saved'}`}>
                                 <div className={`save-indicator ${hasUnsavedChanges ? 'unsaved' : 'saved'}`}></div>
                                 {hasUnsavedChanges ? (
-                                    <span>⚠️ Unsaved - Save Plan!</span>
+                                    <span>⚠️ Saving...</span>
                                 ) : (
-                                    <span>✓ Auto-saved at {lastSaved ? new Date(lastSaved).toLocaleTimeString('en-US', { timeZone: 'Asia/Hong_Kong', hour12: true }) : ''}</span>
+                                    <span>✓ Saved at {lastSaved ? new Date(lastSaved).toLocaleTimeString('en-US', { timeZone: 'Asia/Hong_Kong', hour12: true }) : ''}</span>
                                 )}
                             </div>
                             
                             <div className="action-buttons">
-                                <button className="btn btn-success btn-small" onClick={handleSavePlan}>
-                                    💾 Save Plan (.json)
-                                </button>
-                                <button className="btn btn-primary btn-small" onClick={handleGenerateShareable} title="Download plan for sharing">
-                                    📤 Export for Sharing
-                                </button>
-                                <label className="btn btn-primary btn-small" style={{cursor: 'pointer'}}>
-                                    📂 Load Plan
-                                    <input 
-                                        type="file" 
-                                        accept=".json"
-                                        onChange={handleLoadPlan}
-                                        style={{display: 'none'}}
-                                    />
-                                </label>
-                                <button className="btn btn-warning btn-small" onClick={handleNewPlan}>
-                                    🆕 New Plan
+                                <button className="btn btn-warning btn-small" onClick={handleDownloadBackup} title="Download JSON backup file">
+                                    💾 Download Backup
                                 </button>
                             </div>
                         </div>
@@ -1304,7 +1112,7 @@ Would you like me to create a downloadable instruction file instead?`;
                                     className="btn btn-success btn-small"
                                     onClick={() => setShowImportModal(true)}
                                 >
-                                    📥 Import
+                                    📥 Import CSV
                                 </button>
                             </div>
                             
@@ -1374,14 +1182,14 @@ Would you like me to create a downloadable instruction file instead?`;
                                     onClick={handleExportSchedule}
                                     disabled={scheduledCount === 0}
                                 >
-                                    📤 Export Schedule
+                                    📤 Export Schedule CSV
                                 </button>
                                 <button 
                                     className="btn btn-secondary btn-small"
                                     onClick={handleExportEvents}
                                     disabled={events.length === 0}
                                 >
-                                    📤 Export Library
+                                    📤 Export Library CSV
                                 </button>
                             </div>
                         </div>
