@@ -12,7 +12,16 @@ app.secret_key = os.environ.get('SECRET_KEY', 'iapn-planner-secret-2027')
 CORS(app, supports_credentials=True)
 
 # Config
-DATABASE_URL = os.environ.get('DATABASE_URL')
+# Try POSTGRES_URL first (our custom var), then DATABASE_PUBLIC_URL, then DATABASE_URL
+DATABASE_URL = (
+    os.environ.get('POSTGRES_URL') or
+    os.environ.get('DATABASE_PUBLIC_URL') or
+    os.environ.get('DATABASE_URL')
+)
+if not DATABASE_URL:
+    print('⚠️ WARNING: No DATABASE_URL found. Data will not persist!')
+else:
+    print(f'✅ Database URL found: {DATABASE_URL[:30]}...')
 APP_PASSWORD = os.environ.get('APP_PASSWORD', 'iapn2026')
 
 # ─── Event Library ────────────────────────────────────────────────────────────
