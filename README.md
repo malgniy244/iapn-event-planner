@@ -1,114 +1,69 @@
-# IAPN Event Planner - Full Stack App
+# IAPN Event Planner
 
-## What's This?
-A full-featured event planning app with:
-- ✅ Your exact HTML layout with drag-and-drop
-- ✅ Backend API that saves data
-- ✅ Shows HK time
-- ✅ Free hosting on Render.com
+A full-stack event planning app with drag-and-drop scheduling, revenue calculation, persistent database storage, and password protection.
 
-## Files in This Package:
-- `app.py` - Flask backend API
-- `static/index.html` - Your original HTML (modified to use API)
-- `requirements.txt` - Python dependencies
-- `README.md` - This file
+## Features
 
-## How to Deploy (FREE on Render.com)
+- 🔐 Password-protected (password: `iapn2026`)
+- 🗂 Drag events from the library onto any day
+- 💰 Auto-calculates cost per day and total (HKD/USD)
+- 💾 Auto-saves every change to PostgreSQL database
+- ✏️ Edit day labels and notes inline
+- ➕ Add/remove days dynamically
+- 📱 Works on mobile
 
-### Step 1: Create GitHub Repository
+## Deploy on Render.com (Free)
+
+### Step 1 — Create a GitHub Repository
 
 1. Go to https://github.com/new
-2. Repository name: `iapn-event-planner`
+2. Name it `iapn-event-planner` (or anything you like)
 3. Make it **Public**
-4. Click "Create repository"
+4. Click **Create repository**
+5. Upload all files from this folder
 
-### Step 2: Upload Files to GitHub
+### Step 2 — Deploy on Render.com
 
-**Option A: Via GitHub Website (Easier)**
-1. In your new repo, click "uploading an existing file"
-2. Drag and drop ALL files from this folder:
-   - `app.py`
-   - `requirements.txt`
-   - `static/` folder (with index.html inside)
-3. Commit the files
-
-**Option B: Via Git Command Line**
-```bash
-cd /path/to/this/folder
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/iapn-event-planner.git
-git push -u origin main
-```
-
-### Step 3: Deploy on Render.com (FREE)
-
-1. Go to https://render.com/
-2. Sign up (use GitHub to login)
-3. Click "New" → "Web Service"
-4. Click "Connect a repository" → Find your `iapn-event-planner` repo
-5. Configure:
-   - **Name**: `iapn-planner` (or anything you want)
+1. Go to https://render.com and sign in with GitHub
+2. Click **New +** → **Web Service**
+3. Connect your `iapn-event-planner` repository
+4. Configure:
+   - **Name**: `iapn-planner`
    - **Environment**: `Python 3`
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `gunicorn app:app`
    - **Instance Type**: `Free`
-6. Click "Create Web Service"
-7. Wait 3-5 minutes for deployment
+5. Add **Environment Variables**:
+   - `APP_PASSWORD` = `iapn2026`
+   - `SECRET_KEY` = (any random string, e.g. `my-secret-key-2027`)
+6. Click **Create Web Service**
 
-### Step 4: Get Your URL
+### Step 3 — Add a PostgreSQL Database on Render
 
-Once deployed, Render gives you a URL like:
-```
-https://iapn-planner-xxxx.onrender.com
-```
+1. Click **New +** → **PostgreSQL**
+2. Name it `iapn-db`
+3. Plan: **Free**
+4. Click **Create Database**
+5. Copy the **Internal Database URL**
+6. Go back to your web service → **Environment** → Add:
+   - `DATABASE_URL` = (paste the Internal Database URL)
+7. Click **Save Changes** — the service will redeploy
 
-**Share this URL with your team!** Everyone can use it together.
+### Step 4 — Point planner.numisops.com to Render
 
-## How It Works
+1. In Render, go to your web service → **Settings** → **Custom Domains**
+2. Add `planner.numisops.com`
+3. Render will show you a CNAME value (e.g. `iapn-planner.onrender.com`)
+4. In Cloudflare DNS, add:
+   - Type: `CNAME`
+   - Name: `planner`
+   - Target: (the value Render gives you)
+   - Proxy: **DNS only** (grey cloud)
 
-- **Frontend**: Your exact HTML with drag-and-drop
-- **Backend**: Flask API saves data to `plan_data.json`
-- **Data**: All changes auto-save to the server
-- **Collaboration**: Everyone sees the same data
-
-## Features
-
-✅ All your IAPN 2027 data preloaded
-✅ Drag and drop events between days
-✅ Add/edit/delete events
-✅ Add/remove days
-✅ Auto-save (shows HK time)
-✅ Export to CSV/JSON
-✅ Currency toggle (HKD/USD)
-✅ Works on mobile
+Your app will be live at https://planner.numisops.com
 
 ## Notes
 
-- **Free tier**: App sleeps after 15 min of no activity
-- **First visit after sleep**: Takes 30-60 seconds to wake up
-- **After that**: Instant, no delays
-- **Upgrade to paid ($7/month)**: No sleep, always instant
-
-## Troubleshooting
-
-**App not loading?**
-- Wait 60 seconds on first visit (free tier wakes up)
-- Check Render dashboard for errors
-
-**Data not saving?**
-- Check browser console for errors (F12)
-- Make sure you're using the Render URL, not localhost
-
-**Want to test locally first?**
-```bash
-pip install -r requirements.txt
-python app.py
-# Visit http://localhost:5000
-```
-
-## Need Help?
-
-Check Render docs: https://render.com/docs/web-services
+- **Free tier**: App sleeps after 15 min of inactivity. First visit after sleep takes ~30 seconds.
+- **Data**: Stored in PostgreSQL — survives restarts and sleeps.
+- **Upgrade to $7/month**: No sleep, always instant.
