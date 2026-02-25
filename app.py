@@ -1,60 +1,59 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, session
 from flask_cors import CORS
 import json
 import os
 from datetime import datetime
 import psycopg
 from psycopg.rows import dict_row
+from functools import wraps
 
 app = Flask(__name__, static_folder='static', static_url_path='')
-CORS(app)
+app.secret_key = os.environ.get('SECRET_KEY', 'iapn-planner-secret-2027')
+CORS(app, supports_credentials=True)
 
-# Get database URL from environment
+# Config
 DATABASE_URL = os.environ.get('DATABASE_URL')
+APP_PASSWORD = os.environ.get('APP_PASSWORD', 'iapn2026')
 
-# IAPN event library
+# ─── Event Library ────────────────────────────────────────────────────────────
 EVENT_LIBRARY = [
-    {"id": 1, "name": "Welcome Reception in Murray", "description": "", "duration": "3 hours", "perPersonCost": 1180, "minimumCost": 140000, "category": "food"},
-    {"id": 5, "name": "Welcome Reception in Hyatt Regency", "description": "", "duration": "3 hours", "perPersonCost": 818, "minimumCost": 68800, "category": "food"},
-    {"id": 6, "name": "Gala Dinner in The Verandah", "description": "", "duration": "Dinner", "perPersonCost": 1628, "minimumCost": 360000, "category": "food"},
-    {"id": 9, "name": "Gala Dinner in Crown Wine Cellar", "description": "", "duration": "Dinner", "perPersonCost": 1688, "minimumCost": 110000, "category": "food"},
-    {"id": 10, "name": "Gala Dinner in WaterMark", "description": "", "duration": "Dinner", "perPersonCost": 0, "minimumCost": 168000, "category": "food"},
-    {"id": 11, "name": "Sai Kung Seafood Dinner", "description": "", "duration": "Dinner", "perPersonCost": 1000, "minimumCost": 0, "category": "food"},
-    {"id": 12, "name": "Star Ferry", "description": "110 passengers. 3 hours 45,000", "duration": "Cocktail", "perPersonCost": 0, "minimumCost": 45000, "category": "food"},
-    {"id": 15, "name": "Star Ferry Canapes/ Lunch", "description": "Canapes Room.", "duration": "Cocktail", "perPersonCost": 500, "minimumCost": 0, "category": "food"},
-    {"id": 2, "name": "Conference Hall Rental in Murray", "description": "Main venue for keynote sessions", "duration": "Half Day", "perPersonCost": 0, "minimumCost": 75000, "category": "venue"},
-    {"id": 7, "name": "Conference Hall Rental in Hyatt Regency", "description": "Main venue for keynote sessions", "duration": "Half Day", "perPersonCost": 0, "minimumCost": 40800, "category": "venue"},
-    {"id": 8, "name": "Conference Hall Rental in W Hotel", "description": "Main venue for keynote sessions", "duration": "Half Day", "perPersonCost": 0, "minimumCost": 118000, "category": "venue"},
-    {"id": 3, "name": "Workshop Session", "description": "Interactive training with materials", "duration": "4 hours", "perPersonCost": 1200, "minimumCost": 0, "category": "venue"},
-    {"id": 13, "name": "Tour Bus for Macau", "description": "2 buses, 1 bus 4500 full day estimate", "duration": "", "perPersonCost": 0, "minimumCost": 9000, "category": "other"},
-    {"id": 14, "name": "Macau Lunch - Portugese Food", "description": "Budget 500 per person", "duration": "", "perPersonCost": 500, "minimumCost": 0, "category": "other"},
-    {"id": 16, "name": "Sai Kung Alcohol Cost", "description": "Buy Bottles and bring there.", "duration": "", "perPersonCost": 299.98, "minimumCost": 0, "category": "other"},
-    {"id": 17, "name": "Dragon Dance Performance", "description": "", "duration": "", "perPersonCost": 0, "minimumCost": 10000, "category": "other"},
-    {"id": 18, "name": "Dim Sum Lunch", "description": "", "duration": "Lunch", "perPersonCost": 350, "minimumCost": 0, "category": "other"},
-    {"id": 19, "name": "Korean BBQ Dinner", "description": "", "duration": "Dinner", "perPersonCost": 800, "minimumCost": 0, "category": "other"},
-    {"id": 20, "name": "Star Ferry Alcohol Cost", "description": "", "duration": "Lunch", "perPersonCost": 300, "minimumCost": 0, "category": "other"},
-    {"id": 21, "name": "Murray Lunch", "description": "", "duration": "", "perPersonCost": 600, "minimumCost": 0, "category": "other"},
-    {"id": 22, "name": "Jocky Club Lunch- Saturday/ Sunday", "description": "Wouldnt know until the race schedule out in 2026.", "duration": "", "perPersonCost": 830, "minimumCost": 0, "category": "other"}
+    {"id": 1,  "name": "Welcome Reception in Murray",         "description": "",                                          "duration": "3 hours",  "perPersonCost": 1180,   "minimumCost": 140000, "category": "food"},
+    {"id": 5,  "name": "Welcome Reception in Hyatt Regency",  "description": "",                                          "duration": "3 hours",  "perPersonCost": 818,    "minimumCost": 68800,  "category": "food"},
+    {"id": 6,  "name": "Gala Dinner in The Verandah",         "description": "",                                          "duration": "Dinner",   "perPersonCost": 1628,   "minimumCost": 360000, "category": "food"},
+    {"id": 9,  "name": "Gala Dinner in Crown Wine Cellar",    "description": "",                                          "duration": "Dinner",   "perPersonCost": 1688,   "minimumCost": 110000, "category": "food"},
+    {"id": 10, "name": "Gala Dinner in WaterMark",            "description": "",                                          "duration": "Dinner",   "perPersonCost": 0,      "minimumCost": 168000, "category": "food"},
+    {"id": 11, "name": "Sai Kung Seafood Dinner",             "description": "",                                          "duration": "Dinner",   "perPersonCost": 1000,   "minimumCost": 0,      "category": "food"},
+    {"id": 12, "name": "Star Ferry",                          "description": "110 passengers. 3 hours 45,000",            "duration": "Cocktail", "perPersonCost": 0,      "minimumCost": 45000,  "category": "food"},
+    {"id": 15, "name": "Star Ferry Canapes/ Lunch",           "description": "Canapes Room.",                             "duration": "Cocktail", "perPersonCost": 500,    "minimumCost": 0,      "category": "food"},
+    {"id": 2,  "name": "Conference Hall Rental in Murray",    "description": "Main venue for keynote sessions",           "duration": "Half Day", "perPersonCost": 0,      "minimumCost": 75000,  "category": "venue"},
+    {"id": 7,  "name": "Conference Hall Rental in Hyatt Regency","description": "Main venue for keynote sessions",        "duration": "Half Day", "perPersonCost": 0,      "minimumCost": 40800,  "category": "venue"},
+    {"id": 8,  "name": "Conference Hall Rental in W Hotel",   "description": "Main venue for keynote sessions",           "duration": "Half Day", "perPersonCost": 0,      "minimumCost": 118000, "category": "venue"},
+    {"id": 3,  "name": "Workshop Session",                    "description": "Interactive training with materials",       "duration": "4 hours",  "perPersonCost": 1200,   "minimumCost": 0,      "category": "venue"},
+    {"id": 13, "name": "Tour Bus for Macau",                  "description": "2 buses, 1 bus 4500 full day estimate",     "duration": "",         "perPersonCost": 0,      "minimumCost": 9000,   "category": "other"},
+    {"id": 14, "name": "Macau Lunch - Portugese Food",        "description": "Budget 500 per person",                     "duration": "",         "perPersonCost": 500,    "minimumCost": 0,      "category": "other"},
+    {"id": 16, "name": "Sai Kung Alcohol Cost",               "description": "Buy Bottles and bring there.",              "duration": "",         "perPersonCost": 299.98, "minimumCost": 0,      "category": "other"},
+    {"id": 17, "name": "Dragon Dance Performance",            "description": "",                                          "duration": "",         "perPersonCost": 0,      "minimumCost": 10000,  "category": "other"},
+    {"id": 18, "name": "Dim Sum Lunch",                       "description": "",                                          "duration": "Lunch",    "perPersonCost": 350,    "minimumCost": 0,      "category": "other"},
+    {"id": 19, "name": "Korean BBQ Dinner",                   "description": "",                                          "duration": "Dinner",   "perPersonCost": 800,    "minimumCost": 0,      "category": "other"},
+    {"id": 20, "name": "Star Ferry Alcohol Cost",             "description": "",                                          "duration": "Lunch",    "perPersonCost": 300,    "minimumCost": 0,      "category": "other"},
+    {"id": 21, "name": "Murray Lunch",                        "description": "",                                          "duration": "",         "perPersonCost": 600,    "minimumCost": 0,      "category": "other"},
+    {"id": 22, "name": "Jocky Club Lunch- Saturday/ Sunday",  "description": "Wouldnt know until the race schedule out in 2026.", "duration": "", "perPersonCost": 830,    "minimumCost": 0,      "category": "other"},
 ]
 
 def get_event_by_id(event_id):
-    """Get full event object by ID"""
     for event in EVENT_LIBRARY:
         if event['id'] == event_id:
             return event.copy()
     return None
 
+# ─── Database ─────────────────────────────────────────────────────────────────
 def get_db_connection():
-    """Get database connection"""
     return psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
 def init_database():
-    """Create table if it doesn't exist and initialize with default data"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Create table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS plan_data (
                 id INTEGER PRIMARY KEY DEFAULT 1,
@@ -62,15 +61,9 @@ def init_database():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        
-        # CRITICAL FIX: Check if data exists BEFORE inserting
         cur.execute("SELECT COUNT(*) as count FROM plan_data WHERE id = 1")
         result = cur.fetchone()
-        
-        # Only insert if NO data exists
         if result['count'] == 0:
-            print("⚠️ Database is empty - initializing with IAPN default data...")
-            # Insert default IAPN data
             default_data = {
                 "eventTitle": "IAPN 2027 May 21-24",
                 "eventDescription": "",
@@ -78,10 +71,10 @@ def init_database():
                 "currency": "HKD",
                 "events": EVENT_LIBRARY,
                 "days": [
-                    {"id": "day1", "label": "Day 1", "notes": ""},
-                    {"id": "day2", "label": "Day 2", "notes": "Murray Conference->Star Ferry Lunch->Sai Kung Seafood Dinner"},
-                    {"id": "day3", "label": "Day 3", "notes": "Macau Day Trip->Lunch in Macau-> Come BackBBQ"},
-                    {"id": "day4", "label": "Day 4", "notes": "Conference->Dim Sum->Gala"}
+                    {"id": "day1", "label": "Day 1 - May 21", "notes": ""},
+                    {"id": "day2", "label": "Day 2 - May 22", "notes": "Murray Conference → Star Ferry Lunch → Sai Kung Seafood Dinner"},
+                    {"id": "day3", "label": "Day 3 - May 23", "notes": "Macau Day Trip → Lunch in Macau → Come Back BBQ"},
+                    {"id": "day4", "label": "Day 4 - May 24", "notes": "Conference → Dim Sum → Gala"}
                 ],
                 "schedule": {
                     "day1": [get_event_by_id(1)],
@@ -92,23 +85,17 @@ def init_database():
                 "nextEventId": 23,
                 "nextDayId": 5
             }
-            
-            cur.execute(
-                "INSERT INTO plan_data (id, data) VALUES (1, %s)",
-                (json.dumps(default_data),)
-            )
+            cur.execute("INSERT INTO plan_data (id, data) VALUES (1, %s)", (json.dumps(default_data),))
             conn.commit()
-            print("✅ Database initialized with complete IAPN 2027 schedule!")
+            print("✅ Database initialized with IAPN 2027 data!")
         else:
-            print(f"✅ Database already has data (count={result['count']}) - SKIPPING initialization to preserve your changes!")
-        
+            print("✅ Database already has data — skipping init.")
         cur.close()
         conn.close()
     except Exception as e:
         print(f"❌ Error initializing database: {e}")
 
 def load_data():
-    """Load data from database"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -116,16 +103,12 @@ def load_data():
         result = cur.fetchone()
         cur.close()
         conn.close()
-        
-        if result:
-            return result['data']
-        return None
+        return result['data'] if result else None
     except Exception as e:
         print(f"Error loading data: {e}")
         return None
 
 def save_data(data):
-    """Save data to database"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -141,45 +124,71 @@ def save_data(data):
         print(f"Error saving data: {e}")
         return False
 
-# Initialize database on startup
 if DATABASE_URL:
     init_database()
 else:
-    print("WARNING: No DATABASE_URL found. Data will not persist!")
+    print("⚠️  WARNING: No DATABASE_URL found. Data will not persist!")
 
-@app.route('/')
-def index():
-    return send_from_directory('static', 'index.html')
+# ─── Auth ──────────────────────────────────────────────────────────────────────
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('authenticated'):
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json or {}
+    if data.get('password') == APP_PASSWORD:
+        session['authenticated'] = True
+        return jsonify({"success": True})
+    return jsonify({"success": False, "error": "Wrong password"}), 401
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({"success": True})
+
+@app.route('/api/check-auth', methods=['GET'])
+def check_auth():
+    return jsonify({"authenticated": bool(session.get('authenticated'))})
+
+# ─── Data API ─────────────────────────────────────────────────────────────────
 @app.route('/api/data', methods=['GET'])
+@require_auth
 def get_data():
-    """Get all plan data"""
     data = load_data()
     if data:
         return jsonify(data)
-    else:
-        return jsonify({"error": "No data found"}), 404
+    return jsonify({"error": "No data found"}), 404
 
 @app.route('/api/data', methods=['POST'])
+@require_auth
 def update_data():
-    """Save all plan data"""
     try:
         data = request.json
         if save_data(data):
-            return jsonify({"success": True, "message": "Data saved successfully"})
-        else:
-            return jsonify({"success": False, "error": "Failed to save data"}), 500
+            hk_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M') + ' HKT'
+            return jsonify({"success": True, "savedAt": hk_time})
+        return jsonify({"success": False, "error": "Failed to save"}), 500
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/health', methods=['GET'])
 def health():
-    """Health check endpoint"""
     return jsonify({
         "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.utcnow().isoformat(),
         "database": "connected" if DATABASE_URL else "not configured"
     })
+
+# ─── Frontend ─────────────────────────────────────────────────────────────────
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def index(path):
+    return send_from_directory('static', 'index.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
